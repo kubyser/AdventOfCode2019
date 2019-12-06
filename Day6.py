@@ -5,11 +5,13 @@ class Body:
         self.moons = moons
         self.depth = depth
 
+
 def readInputData():
     f = open("day6_input.txt")
     s = f.read().splitlines()
     f.close()
     return s
+
 
 def buildUniverse(p):
     universe = {}
@@ -38,6 +40,7 @@ def calcDepth(root):
         x.depth = root.depth + 1
         calcDepth(x)
 
+
 def printUniverse(universe):
     for b in universe.values():
         print(b.name)
@@ -47,6 +50,7 @@ def printUniverse(universe):
         for m in b.moons:
             print(m.name)
         print ("---")
+
 
 def distGoingUp(src, dest, skip = None):
     if src.name == dest.name:
@@ -58,6 +62,7 @@ def distGoingUp(src, dest, skip = None):
         if r is not None:
             return r+1
     return None
+
 
 def findRoute(src, dest, skip = None):
     dUp = distGoingUp(src, dest, skip)
@@ -73,7 +78,7 @@ def findRoute(src, dest, skip = None):
 p = readInputData()
 universe = buildUniverse(p)
 print("Done building the universe")
-#printUniverse(universe)
+# printUniverse(universe)
 
 calcDepth(universe["COM"])
 print("Done calculating orbit depths")
