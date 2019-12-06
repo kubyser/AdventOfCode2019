@@ -81,7 +81,7 @@ print "Done calculating orbit depths"
 sum = 0
 for b in universe.values():
     sum = sum + b.depth
-print "Sum of depths: ", sum
+print "Sum of orbit depths: ", sum
 
 src = universe["YOU"].sun
 dest = universe["SAN"].sun
