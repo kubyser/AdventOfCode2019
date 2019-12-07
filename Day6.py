@@ -5,11 +5,13 @@ class Body:
         self.moons = moons
         self.depth = depth
 
+
 def readInputData():
     f = open("day6_input.txt")
     s = f.read().splitlines()
     f.close()
     return s
+
 
 def buildUniverse(p):
     universe = {}
@@ -18,7 +20,7 @@ def buildUniverse(p):
         if s[1] in universe:
             body = universe[s[1]]
             if body.sun is not None:
-                print "ERROR: sun not null on existing body: ", s[1]
+                print("ERROR: sun not null on existing body: ", s[1])
                 return {}
         else:
             body = Body(s[1], None, [], 0)
@@ -38,15 +40,17 @@ def calcDepth(root):
         x.depth = root.depth + 1
         calcDepth(x)
 
+
 def printUniverse(universe):
     for b in universe.values():
-        print b.name
-        print "Depth: ", b.depth
-        print "Sun: ", b.sun.name if b.sun is not None else "NONE"
-        print "Moons:"
+        print(b.name)
+        print("Depth: ", b.depth)
+        print("Sun: ", b.sun.name if b.sun is not None else "NONE")
+        print("Moons:")
         for m in b.moons:
-            print m.name
-        print "---"
+            print(m.name)
+        print ("---")
+
 
 def distGoingUp(src, dest, skip = None):
     if src.name == dest.name:
@@ -59,12 +63,13 @@ def distGoingUp(src, dest, skip = None):
             return r+1
     return None
 
+
 def findRoute(src, dest, skip = None):
     dUp = distGoingUp(src, dest, skip)
     if dUp is not None:
         return dUp
     if src.sun is None:
-        print "ERROR: reached the COM and still not found"
+        print("ERROR: reached the COM and still not found")
         return None
     return findRoute(src.sun, dest, src) + 1
 
@@ -72,19 +77,19 @@ def findRoute(src, dest, skip = None):
 
 p = readInputData()
 universe = buildUniverse(p)
-print "Done building the universe"
-#printUniverse(universe)
+print("Done building the universe")
+# printUniverse(universe)
 
 calcDepth(universe["COM"])
-print "Done calculating orbit depths"
+print("Done calculating orbit depths")
 
 sum = 0
 for b in universe.values():
     sum = sum + b.depth
-print "Sum of orbit depths: ", sum
+print("Sum of orbit depths: ", sum)
 
 src = universe["YOU"].sun
 dest = universe["SAN"].sun
 d = findRoute(src, dest)
-print "Orbit transfers from YOU to SAN: ", d
+print("Orbit transfers from YOU to SAN: ", d)
 
