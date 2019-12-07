@@ -1,8 +1,11 @@
+from queue import Queue
+from threading import Thread
+
 class IntComputer:
-    def __init__(self, program, inStream=None, outStream=None):
+    def __init__(self, program, inQueue=None, outQueue=None):
         self.program = program
-        self.inStream = inStream
-        self.outStream = outStream
+        self.inQueue = inQueue
+        self.outQueue = outQueue
 
     def multiply(self, p, pos, params):
         a = params[0]["value"]
@@ -19,28 +22,19 @@ class IntComputer:
         return p, pos+4
 
     def inputAndSave(self, p, pos, params):
-        if self.inStream is None:
-            a = input("Input value:")
+        if self.inQueue is None:
+            a = int(input("Input value:"))
         else:
-            if len(self.inStream) == 0:
-                # print("ERROR: no data at input")
-                # a = None
-                a = input("Input value:")
-            else:
-                a = self.inStream[0]
-                self.inStream = self.inStream[1:]
-# TODO: remove hack
-        if a == '0':
-            a = 0
+            a = self.inQueue.get()
         p[params[0]["pos"]] = a
         return p, pos+2
 
     def readAndOutput(self, p, pos, params):
         a = params[0]["value"]
-        if self.outStream is None:
+        if self.outQueue is None:
             print("Output value: ", a)
         else:
-            self.outStream.append(a)
+            self.outQueue.put(a)
         return p, pos+2
 
     def jumpIfTrue(self, p, pos, params):
@@ -61,7 +55,7 @@ class IntComputer:
         p[params[2]["pos"]] = 1 if params[0]["value"] < params[1]["value"] else 0
         return p, pos+4
 
-    def checkEqual(p, pos, params):
+    def checkEqual(self, p, pos, params):
         p[params[2]["pos"]] = 1 if params[0]["value"] == params[1]["value"] else 0
         return p, pos+4
 
@@ -82,7 +76,7 @@ class IntComputer:
         while True:
             op = p[pos];
             if op == 99:
-                return p;
+                return
             opCode = op % 100
             parModes = op // 100
             if not opCode in self.operSet:
@@ -107,13 +101,16 @@ class IntComputer:
                 parModes = parModes // 10
             p,pos = opDef["action"](self,p,pos,params)
             continue
-        return p
+        return
 
-def printInput(inStream):
-    while len(inStream)>0:
-        s = inStream[0]
-        print(s)
-        inStream = inStream[1:]
+# IntComputerThread
+class IntComputerThread(Thread):
+
+    def __init__(self, computer):
+        self.computer = computer
+
+    def run(self):
+        self.computer.compute()
 
 class Chain:
     def __init__(self, program, count, inStream = None, outStream = None, preInputs = None):
@@ -164,48 +161,50 @@ def readProgram(fileName):
     f.close()
     return p
 
-#p=[3,0,4,0,99]
-#p=[1105,1,10,0,0,0,0,0,0,0,3,0,4,0,1005,0,10,99]
-#p=[3,15,3,16,1002,16,10,16,1,16,15,15,4,15,99,0,0] #43210
-#p=[3,23,3,24,1002,24,10,24,1002,23,-1,23,101,5,23,23,1,24,23,23,4,23,99,0,0] #01234
-#p=[3,31,3,32,1002,32,10,32,1001,31,-2,31,1007,31,0,33,1002,33,7,33,1,33,31,31,1,32,31,31,4,31,99,0,0,0] #10432
-#p=[1101,1,5,0,4,0,99]
+def main():
+    #p=[3,0,4,0,99]
+    #p=[1105,1,10,0,0,0,0,0,0,0,3,0,4,0,1005,0,10,99]
+    #p=[3,15,3,16,1002,16,10,16,1,16,15,15,4,15,99,0,0] #43210
+    #p=[3,23,3,24,1002,24,10,24,1002,23,-1,23,101,5,23,23,1,24,23,23,4,23,99,0,0] #01234
+    #p=[3,31,3,32,1002,32,10,32,1001,31,-2,31,1007,31,0,33,1002,33,7,33,1,33,31,31,1,32,31,31,4,31,99,0,0,0] #10432
+    #p=[1101,1,5,0,4,0,99]
 
-p=readProgram("day7_input.txt")
-inStream = [0]
+    p=readProgram("day7_input.txt")
+    inStream = [0]
 
-maxThrust = 0
-bestPhases = []
-for p1 in range(5):
-    used = {p1}
-    for p2 in range(5):
-        if p2 in used:
-            continue
-        used.add(p2)
-        for p3 in range(5):
-            if p3 in used:
+    maxThrust = 0
+    bestPhases = []
+    for p1 in range(5):
+        used = {p1}
+        for p2 in range(5):
+            if p2 in used:
                 continue
-            used.add(p3)
-            for p4 in range(5):
-                if p4 in used:
+            used.add(p2)
+            for p3 in range(5):
+                if p3 in used:
                     continue
-                used.add(p4)
-                for p5 in range(5):
-                    if p5 in used:
+                used.add(p3)
+                for p4 in range(5):
+                    if p4 in used:
                         continue
-                    phases = makeListOfLists([p1, p2, p3, p4, p5])
-                    res = []
-                    chain = Chain(p, 5, inStream, res, phases)
-                    chain.compute()
-                    thrust = res[0]
-                    if thrust > maxThrust:
-                        maxThrust = thrust
-                        bestPhases = str(p1)+str(p2)+str(p3)+str(p4)+str(p5)
-                        print("Found new max. Phases: ", bestPhases,", thrust: ", maxThrust)
-                used.remove(p4)
-            used.remove(p3)
-        used.remove(p2)
-    used.remove(p1)
-print("Done. Phases: ", bestPhases,", thrust: ", maxThrust)
+                    used.add(p4)
+                    for p5 in range(5):
+                        if p5 in used:
+                            continue
+                        phases = makeListOfLists([p1, p2, p3, p4, p5])
+                        res = []
+                        chain = Chain(p, 5, inStream, res, phases)
+                        chain.compute()
+                        thrust = res[0]
+                        if thrust > maxThrust:
+                            maxThrust = thrust
+                            bestPhases = str(p1)+str(p2)+str(p3)+str(p4)+str(p5)
+                            print("Found new max. Phases: ", bestPhases,", thrust: ", maxThrust)
+                    used.remove(p4)
+                used.remove(p3)
+            used.remove(p2)
+        used.remove(p1)
+    print("Done. Phases: ", bestPhases,", thrust: ", maxThrust)
 
-
+if __name__ == '__main__':
+    main()
