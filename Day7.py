@@ -116,12 +116,14 @@ def printInput(inStream):
         inStream = inStream[1:]
 
 class Chain:
-    def __init__(self, program, count, inStream = None, outStream = None, preInputs = None):
+    def __init__(self, program, count, inStream = None, outStream = None, preInputs = None, loop = False):
         self.program = program
         self.inStream = inStream
         self.outStream = outStream
         self.preInputs = preInputs
         self.computers = []
+        self.compInitialized = [False] * count
+        self.loop = loop
         self.buffer = []
         for i in range(count):
             self.computers.append(IntComputer(program.copy(), inStream if i==0 else None, outStream if i==count-1 else None))
@@ -137,18 +139,28 @@ class Chain:
             return self.preInputs[num] + comp.inStream
 
     def compute(self):
-        for i in range(len(self.computers)):
-            c = self.computers[i]
-#            print("Computer ",i, " running. Input before preInput: ", c.inStream)
-            c.inStream = self.buildInput(c, i)
-#            print("Computer ",i, " running. Input after preInput: ", c.inStream)
-            if i<len(self.computers)-1:
-                self.buffer = []
-                c.outStream = self.buffer
-                self.computers[i+1].inStream = self.buffer
-            c.compute()
-#            print("Buffer after run of computer ", i, ": ", self.buffer)
-            i = i+1
+        self.goodToGo = True
+        while self.goodToGo:
+            for i in range(len(self.computers)):
+                c = self.computers[i]
+                # print("Computer ",i, " running. Input before preInput: ", c.inStream)
+                if not self.compInitialized[i]:
+                    c.inStream = self.buildInput(c, i)
+                # print("Computer ",i, " running. Input after preInput: ", c.inStream)
+                if i<len(self.computers)-1:
+                    self.buffer = []
+                    c.outStream = self.buffer
+                    self.computers[i+1].inStream = self.buffer
+                else:
+                    self.buffer = []
+                    c.outStream = self.buffer
+                    self.computers[0].inStream = self.buffer
+                c.compute()
+                print("Buffer after run of computer ", i, ": ", self.buffer)
+                i = i+1
+            if not self.loop or len(self.buffer == 0):
+                self.goodToGo = False
+
 
 def makeListOfLists(s):
     r = []
@@ -171,8 +183,13 @@ def readProgram(fileName):
 #p=[3,31,3,32,1002,32,10,32,1001,31,-2,31,1007,31,0,33,1002,33,7,33,1,33,31,31,1,32,31,31,4,31,99,0,0,0] #10432
 #p=[1101,1,5,0,4,0,99]
 
-p=readProgram("day7_input.txt")
+p=readProgram("day7_input_test_pt2_1.txt")
 inStream = [0]
+
+phases = makeListOfLists([9,8,7,6,5])
+res = []
+chain = Chain(p, 5, inStream, res, phases)
+chain.compute()
 
 maxThrust = 0
 bestPhases = []
