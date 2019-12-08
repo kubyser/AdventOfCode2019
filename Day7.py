@@ -74,7 +74,7 @@ class IntComputer:
         p = self.program
         pos = 0
         while True:
-            op = p[pos];
+            op = p[pos]
             if op == 99:
                 return
             opCode = op % 100
@@ -103,49 +103,47 @@ class IntComputer:
             continue
         return
 
+
 # IntComputerThread
 class IntComputerThread(Thread):
 
     def __init__(self, computer):
+        Thread.__init__(self)
         self.computer = computer
 
     def run(self):
         self.computer.compute()
 
-class Chain:
-    def __init__(self, program, count, inStream = None, outStream = None, preInputs = None):
-        self.program = program
-        self.inStream = inStream
-        self.outStream = outStream
-        self.preInputs = preInputs
-        self.computers = []
-        self.buffer = []
-        for i in range(count):
-            self.computers.append(IntComputer(program.copy(), inStream if i==0 else None, outStream if i==count-1 else None))
 
-    def buildInput(self, comp, num):
-        if self.preInputs is None:
-            return comp.inStream
-        if len(self.preInputs)-1 < num:
-            return comp.inStream
-        if comp.inStream is None:
-            return self.preInputs[num]
-        else:
-            return self.preInputs[num] + comp.inStream
+class Chain:
+    def __init__(self, program, count, inputValue = None, initValues = None, loop = False):
+        self.program = program
+        self.inputValue = inputValue
+        self.initValues = initValues
+        self.loop = loop
+        self.computers = []
+        for i in range(count):
+            self.computers.append(IntComputerThread(IntComputer(program.copy(),
+                                                    self.computers[i-1].computer.outQueue if i>0 else Queue(),
+                                                    Queue())))
+        if self.loop:
+            self.computers[0].computer.inQueue = self.computers[-1].computer.outQueue
 
     def compute(self):
-        for i in range(len(self.computers)):
-            c = self.computers[i]
-#            print("Computer ",i, " running. Input before preInput: ", c.inStream)
-            c.inStream = self.buildInput(c, i)
-#            print("Computer ",i, " running. Input after preInput: ", c.inStream)
-            if i<len(self.computers)-1:
-                self.buffer = []
-                c.outStream = self.buffer
-                self.computers[i+1].inStream = self.buffer
-            c.compute()
-#            print("Buffer after run of computer ", i, ": ", self.buffer)
-            i = i+1
+        if self.initValues is not None:
+            for i in range(len(self.initValues)):
+                self.computers[i].computer.inQueue.put(self.initValues[i])
+        if self.inputValue is not None:
+            self.computers[0].computer.inQueue.put(self.inputValue)
+        for x in self.computers:
+            x.start()
+        for x in self.computers:
+            x.join()
+        if self.computers[-1].computer.outQueue.empty():
+            return None
+        else:
+            return self.computers[-1].computer.outQueue.get()
+
 
 def makeListOfLists(s):
     r = []
@@ -161,49 +159,48 @@ def readProgram(fileName):
     f.close()
     return p
 
-def main():
-    #p=[3,0,4,0,99]
-    #p=[1105,1,10,0,0,0,0,0,0,0,3,0,4,0,1005,0,10,99]
-    #p=[3,15,3,16,1002,16,10,16,1,16,15,15,4,15,99,0,0] #43210
-    #p=[3,23,3,24,1002,24,10,24,1002,23,-1,23,101,5,23,23,1,24,23,23,4,23,99,0,0] #01234
-    #p=[3,31,3,32,1002,32,10,32,1001,31,-2,31,1007,31,0,33,1002,33,7,33,1,33,31,31,1,32,31,31,4,31,99,0,0,0] #10432
-    #p=[1101,1,5,0,4,0,99]
-
-    p=readProgram("day7_input.txt")
-    inStream = [0]
-
+def findMaxThrust(program, loop):
+    if not loop:
+        phaseLowRange = 0
+        phaseHighRange = 5
+    else:
+        phaseLowRange = 5
+        phaseHighRange = 10
     maxThrust = 0
     bestPhases = []
-    for p1 in range(5):
+    for p1 in range(phaseLowRange, phaseHighRange):
         used = {p1}
-        for p2 in range(5):
+        for p2 in range(phaseLowRange, phaseHighRange):
             if p2 in used:
                 continue
             used.add(p2)
-            for p3 in range(5):
+            for p3 in range(phaseLowRange, phaseHighRange):
                 if p3 in used:
                     continue
                 used.add(p3)
-                for p4 in range(5):
+                for p4 in range(phaseLowRange, phaseHighRange):
                     if p4 in used:
                         continue
                     used.add(p4)
-                    for p5 in range(5):
+                    for p5 in range(phaseLowRange, phaseHighRange):
                         if p5 in used:
                             continue
-                        phases = makeListOfLists([p1, p2, p3, p4, p5])
-                        res = []
-                        chain = Chain(p, 5, inStream, res, phases)
-                        chain.compute()
-                        thrust = res[0]
+                        phases = [p1, p2, p3, p4, p5]
+                        thrust = Chain(program, 5, 0, phases, loop).compute()
                         if thrust > maxThrust:
                             maxThrust = thrust
-                            bestPhases = str(p1)+str(p2)+str(p3)+str(p4)+str(p5)
-                            print("Found new max. Phases: ", bestPhases,", thrust: ", maxThrust)
+                            bestPhases = phases
+                            # print("Found new max. Phases: ", bestPhases,", thrust: ", maxThrust)
                     used.remove(p4)
                 used.remove(p3)
             used.remove(p2)
         used.remove(p1)
+    return bestPhases, maxThrust
+
+
+def main():
+    p = readProgram("day7_input.txt")
+    bestPhases, maxThrust = findMaxThrust(p, True)
     print("Done. Phases: ", bestPhases,", thrust: ", maxThrust)
 
 if __name__ == '__main__':

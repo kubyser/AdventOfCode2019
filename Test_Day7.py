@@ -2,7 +2,11 @@ import unittest
 from queue import Queue
 
 from Day7 import IntComputer
+from Day7 import IntComputerThread
 from Day7 import readProgram
+from Day7 import Chain
+from Day7 import findMaxThrust
+
 
 class IntComputerTestCase(unittest.TestCase):
 
@@ -53,6 +57,60 @@ class IntComputerTestCase(unittest.TestCase):
         self.assertEqual(self.runSingleComputer([3,3,1105,-1,9,1101,0,0,12,4,12,99,1],[222]),[1])
         p = readProgram("day5_input.txt")
         self.assertEqual(self.runSingleComputer(p,[5]), [2369720])
+
+    def runSingleComputerThreaded(self, p, inValues):
+        t = IntComputerThread(IntComputer(p, Queue(), Queue()))
+        t.start()
+        for x in inValues:
+            t.computer.inQueue.put(x)
+        t.join()
+        outValues = []
+        while not t.computer.outQueue.empty():
+            outValues.append(t.computer.outQueue.get())
+        return outValues
+
+    def test_IntComputerThreadSingle(self):
+        self.assertEqual(self.runSingleComputerThreaded([3,9,8,9,10,9,4,9,99,-1,8],[7]),[0])
+        self.assertEqual(self.runSingleComputerThreaded([3,9,8,9,10,9,4,9,99,-1,8],[8]),[1])
+        p = readProgram("day5_input.txt")
+        self.assertEqual(self.runSingleComputerThreaded(p,[5]), [2369720])
+
+    def test_chain(self):
+        # no loop
+        self.assertEqual(Chain([3,15,3,16,1002,16,10,16,1,16,15,15,4,15,99,0,0],5,0,[4,3,2,1,0]).compute(), 43210)
+        self.assertEqual(Chain([3,23,3,24,1002,24,10,24,1002,23,-1,23,
+                                101,5,23,23,1,24,23,23,4,23,99,0,0], 5, 0, [0,1,2,3,4]).compute(), 54321)
+        self.assertEqual(Chain([3,31,3,32,1002,32,10,32,1001,31,-2,31,1007,31,0,33,
+                                1002,33,7,33,1,33,31,31,1,32,31,31,4,31,99,0,0,0], 5, 0, [1,0,4,3,2]).compute(), 65210)
+        # loop
+        self.assertEqual(Chain([3,26,1001,26,-4,26,3,27,1002,27,2,27,1,27,26,
+                                27,4,27,1001,28,-1,28,1005,28,6,99,0,0,5], 5, 0, [9,8,7,6,5], True).compute(), 139629729)
+        self.assertEqual(Chain([3,52,1001,52,-5,52,3,53,1,52,56,54,1007,54,5,55,1005,55,26,1001,54,
+                                -5,54,1105,1,12,1,53,54,53,1008,54,0,55,1001,55,1,55,2,53,55,53,4,
+                                53,1001,56,-1,56,1005,56,6,99,0,0,0,0,10], 5, 0, [9,7,8,5,6], True).compute(), 18216)
+
+    def test_day7(self):
+        # part 1
+        self.assertEqual(findMaxThrust([3,15,3,16,1002,16,10,16,1,16,15,15,4,15,99,0,0], False),
+                         ([4,3,2,1,0], 43210))
+        self.assertEqual(findMaxThrust([3,23,3,24,1002,24,10,24,1002,23,-1,23,
+                                        101,5,23,23,1,24,23,23,4,23,99,0,0], False),
+                         ([0,1,2,3,4], 54321))
+        self.assertEqual(findMaxThrust([3,31,3,32,1002,32,10,32,1001,31,-2,31,1007,31,0,33,
+                                        1002,33,7,33,1,33,31,31,1,32,31,31,4,31,99,0,0,0], False),
+                         ([1,0,4,3,2], 65210))
+        p = readProgram("day7_input.txt")
+        self.assertEqual(findMaxThrust(p, False), ([3, 4, 1, 2, 0], 359142))
+        # part 2
+        self.assertEqual(findMaxThrust([3,26,1001,26,-4,26,3,27,1002,27,2,27,1,27,26,
+                                        27,4,27,1001,28,-1,28,1005,28,6,99,0,0,5], True),
+                         ([9,8,7,6,5], 139629729))
+        self.assertEqual(findMaxThrust([3,52,1001,52,-5,52,3,53,1,52,56,54,1007,54,5,55,1005,55,26,1001,54,
+                                        -5,54,1105,1,12,1,53,54,53,1008,54,0,55,1001,55,1,55,2,53,55,53,4,
+                                        53,1001,56,-1,56,1005,56,6,99,0,0,0,0,10], True),
+                         ([9,7,8,5,6], 18216))
+        p = readProgram("day7_input.txt")
+        self.assertEqual(findMaxThrust(p, True), ([9, 7, 8, 6, 5], 4374895))
 
 
 if __name__ == '__main__':
