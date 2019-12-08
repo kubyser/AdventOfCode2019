@@ -8,8 +8,27 @@ class SpaceImageFormat:
         while i * self.width * self.height < len(self.data):
             self.layers.append(self.data[i * self.height * self.width : (i+1) * self.height * self.width])
             i += 1
+        self.bitmap = [2] * self.width * self.height
+        for i in range(self.width * self.height):
+            for x in self.layers:
+                if int(x[i]) != 2:
+                    self.bitmap[i] = int(x[i])
+                    break
 
-def calcForLayersWithLessTransparents(image):
+    def bitmapToString(self, newLines = False):
+        if not newLines:
+            return "".join(str(x) for x in self.bitmap)
+        else:
+            s = "".join(str(x) for x in self.bitmap[0 : self.width])
+            for i in range(1, self.height):
+                s = s + "\n" + "".join(str(x) for x in self.bitmap[i * self.width : (i+1) * self.width])
+            return s
+
+    def bitmapToImage(self):
+        return self.bitmapToString(True).replace("0", " ").replace("1", "#")
+
+
+def calcForLayersWithLessZeros(image):
     minZeros = image.layers[0].count("0")
     res = image.layers[0].count("1") * image.layers[0].count("2")
     for x in image.layers[1:]:
@@ -24,7 +43,9 @@ def main():
     s = f.read()
     f.close()
     image = SpaceImageFormat(s, 25, 6)
-    print(calcForLayersWithLessTransparents(image))
+    print(image.bitmapToString())
+    print("")
+    print(image.bitmapToImage())
 
 if __name__ == '__main__':
     main()
