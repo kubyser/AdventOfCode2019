@@ -144,15 +144,6 @@ class Chain:
         else:
             return self.computers[-1].computer.outQueue.get()
 
-
-def makeListOfLists(s):
-    r = []
-    for x in s:
-        n = []
-        n.append(x)
-        r.append(n)
-    return r
-
 def readProgram(fileName):
     f = open(fileName, "r")
     p = [int(x) for x in f.read().split(",")]
