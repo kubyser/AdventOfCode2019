@@ -8,11 +8,14 @@ class SkyMap:
             self.y = y
             self.hiddenAsteroidIds = []
 
+    def distance(self, a, b):
+        return math.sqrt((a.x-b.x)*(a.x-b.x) + (a.y - b.y)*(a.y - b.y))
+
     def areCollinear(self, a, b, c):
         eps = 0.0000001
-        ab = math.sqrt((a.x-b.x)*(a.x-b.x) + (a.y - b.y)*(a.y - b.y))
-        bc = math.sqrt((c.x-b.x)*(c.x-b.x) + (c.y - b.y)*(c.y - b.y))
-        ac = math.sqrt((a.x-c.x)*(a.x-c.x) + (a.y - c.y)*(a.y - c.y))
+        ab = self.distance(a, b)
+        bc = self.distance(b, c)
+        ac = self.distance(a, c)
         c1 = ab+bc
         c2 = ab+ac
         c3 = bc+ac
@@ -55,6 +58,31 @@ class SkyMap:
                 maxVisible = self.getVisibleAsteroidsCount(x)
                 res = x
         return res
+
+    def calculateAngle(self, a, b):
+        x = b.x - a.x
+        y = a.y - b.y
+        v = self.distance(a, b)
+        if y < 0:
+            angle = math.pi - math.asin(x/v)
+        elif x >= 0:
+            angle = math.asin(x/v)
+        else:
+            angle = math.pi*2 + math.asin(x/v)
+        return angle
+
+    def angleKey(self, a):
+        return a[1]
+
+    def getVisibleSortedByAngles(self, a):
+        vis = self.getVisibleAsteroids(a)
+        visAngles = []
+        for b in vis:
+            angle = self.calculateAngle(a, b)
+            visAngles.append((b, angle))
+        visAngles.sort(key=self.angleKey)
+        return visAngles
+
 
     def __init__(self, mapList):
         self.asteroids = []
