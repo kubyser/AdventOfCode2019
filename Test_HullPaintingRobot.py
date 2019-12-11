@@ -15,6 +15,12 @@ class HullPaintingRobotTestCase(unittest.TestCase):
         robot.run()
         self.assertEqual(2343, len(robot.visited))
 
+    def test_part2(self):
+        p = IntComputer.readProgram("day11_input.txt")
+        robot = HullPaintingRobot(p)
+        robot.run(1)
+        self.assertEqual(249, len(robot.visited))
+
 
 if __name__ == '__main__':
     unittest.main()

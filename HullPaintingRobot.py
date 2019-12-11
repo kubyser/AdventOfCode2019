@@ -35,12 +35,12 @@ class HullPaintingRobot:
         else:
             return 0
 
-    def run(self):
+    def run(self, startColor = 0):
         inQueue = Queue()
         outQueue = Queue()
         computer = IntComputer(self.program, inQueue, outQueue)
         cThread = IntComputerThread(computer)
-        inQueue.put(0)
+        inQueue.put(startColor)
         cThread.start()
         color = None
         turn = None
