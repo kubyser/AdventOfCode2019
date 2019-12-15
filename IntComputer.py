@@ -60,6 +60,9 @@ class IntComputer:
             a = int(input("Input value:"))
         else:
             a = self.inQueue.get()
+            if a == "TERM":
+                a = 0
+                self.errorHalt = True
         self.writeMem(params[0].address,  a)
         return pos+2
 
@@ -163,6 +166,9 @@ class IntComputerThread(Thread):
 
     def run(self):
         self.computer.compute()
+
+    def terminate(self):
+        self.computer.inQueue.put("TERM")
 
 
 class Chain:
