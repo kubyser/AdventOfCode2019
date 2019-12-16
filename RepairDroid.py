@@ -15,12 +15,14 @@ class RepairDroid:
     def __init__(self, program):
         self.program = program
         self.field = {}
-        self.unexplored = []
+        self.cellsWithOxygen = set()
         self.xPos = 0
         self.yPos = 0
         startCell = self.Cell(0, 0, 1)
         startCell.distance = 0
         self.field[(0, 0)] = startCell
+        self.oxygenCell = None
+        self.cellsByDistance = {0: [startCell]}
         self.inQueue = Queue()
         self.outQueue = Queue()
         self.computer = IntComputerThread(IntComputer(self.program, self.inQueue, self.outQueue))
@@ -68,13 +70,17 @@ class RepairDroid:
             #print("TYPE", res, ": (", x, ",", y, ")")
             nCell.type = res
             r2 = self.sendAndRead(oppositeDirection)
-            if r2 != 1:
+            if r2 != 1 and r2 != 2:
                 print("ERROR: returned back but cell no longer accessible")
                 return None
         else:
             print("ERROR: invalid response: ", res)
             return None
         self.field[(x, y)] = nCell
+        if nCell.distance not in self.cellsByDistance:
+            self.cellsByDistance[nCell.distance] = []
+        if nCell.type != 0:
+            self.cellsByDistance[nCell.distance].append(nCell)
         return res, nCell
 
     def exploreAround(self):
@@ -84,8 +90,8 @@ class RepairDroid:
         for direction in range(1, 5):
             res, nCell = self.exploreAndReturn(direction)
             if res == 2:
-                print("Success! Found the oxygen system and returning!")
-                return nCell
+                print("Success! Found the oxygen system!")
+                self.oxygenCell = nCell
         return None
 
     def getDirectionToNeighbour(self, targetCell, fromCell = None):
@@ -125,7 +131,7 @@ class RepairDroid:
             d = self.getDirectionToNeighbour(nCell)
             #print("Backtracking: at ", self.xPos, self.yPos, ", command = ", d)
             res = self.sendAndRead(d)
-            if res != 1:
+            if res != 1 and res != 2:
                 print("ERROR: backtracking got unexpected cell type: ", res)
                 return None
             self.xPos = nCell.x
@@ -136,7 +142,7 @@ class RepairDroid:
             a = self.getDirectionToNeighbour(nCell, cCell)
             #print("Moving along path: command=", a)
             res = self.sendAndRead(a)
-            if res != 1:
+            if res != 1 and res != 2:
                 print("ERROR: moving along path got unexpected cell type: ", res)
                 return None
             cCell = nCell
@@ -144,13 +150,7 @@ class RepairDroid:
         self.yPos = targetCell.y
 
     def exploreAllCellsWithDistance(self, targetDistance):
-        cellsToExplore = []
-        for a in self.field.values():
-            if a.distance == targetDistance:
-                cellsToExplore.append(a)
-        for b in cellsToExplore:
-            if b.type == 0:
-                continue
+        for b in self.cellsByDistance[targetDistance]:
             #print("I am at ", self.xPos, self.yPos, "Going to explore (", b.x, ",", b.y, ")")
             self.goTo(b)
             res = self.exploreAround()
@@ -163,6 +163,9 @@ class RepairDroid:
         res = None
         while distanceToExplore < 1000:
             print("Exploring cells with distance ", distanceToExplore)
+            if distanceToExplore not in self.cellsByDistance:
+                print("No cells with this distance, stopping")
+                break
             res = self.exploreAllCellsWithDistance(distanceToExplore)
             if res is not None:
                 break
@@ -170,9 +173,9 @@ class RepairDroid:
         print("Stopping computer")
         self.computer.terminate()
         self.computer.join()
-        if res is not None:
-            return res.distance
-        print("ERROR: got too deep... something's not right")
+        if self.oxygenCell is not None:
+            return self.oxygenCell.distance
+        print("Got too deep... something's not right")
         return None
 
     def printField(self):
@@ -198,6 +201,9 @@ class RepairDroid:
                     c = -1
                 if i+minX == 0 and maxY-j == 0:
                     c = 3
+                if (i+minX, maxY-j) in self.field:
+                    if self.field[(i+minX, maxY-j)] in self.cellsWithOxygen:
+                        c = 4
                 if c == 0:
                     p = "#"
                 elif c == 1:
@@ -206,8 +212,45 @@ class RepairDroid:
                     p = "@"
                 elif c == 3:
                     p = "X"
+                elif c == 4:
+                    p = "o"
                 else:
                     p = " "
                 line = line + p
             print(line)
+
+    def findNeighboursWithoutOxygen(self, cell):
+        newCells = set()
+        for direction in range(1,5):
+            x = cell.x
+            y = cell.y
+            if direction == 1:
+                y += 1
+            elif direction == 2:
+                y -= 1
+            elif direction == 3:
+                x -= 1
+            else:
+                x += 1
+            nCell = self.field[(x, y)]
+            if nCell.type != 0 and nCell not in self.cellsWithOxygen:
+                newCells.add(nCell)
+                self.cellsWithOxygen.add(nCell)
+        return newCells
+
+
+    def calculateTimeToFillWithOxygen(self, maxMinutes = 0):
+        self.cellsWithOxygen = {self.oxygenCell}
+        cellsToAdd = {self.oxygenCell}
+        minutes = 0
+        while len(cellsToAdd) > 0:
+            if maxMinutes != 0 and minutes >= maxMinutes:
+                return minutes
+            newCells = set()
+            for a in cellsToAdd:
+                newCells = newCells.union(self.findNeighboursWithoutOxygen(a))
+            cellsToAdd = newCells
+            minutes += 1
+        return minutes - 1
+
 

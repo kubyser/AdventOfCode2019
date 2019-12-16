@@ -9,6 +9,10 @@ def main():
     droid.printField()
     if res != None:
         print("All done! Distance to oxygen tank=", res)
+    minutes = droid.calculateTimeToFillWithOxygen()
+    droid.printField()
+    print("Minutes to fill with oxygen: ", minutes)
+
 
 if __name__ == '__main__':
     main()
