@@ -12,7 +12,7 @@ def main():
     print("Done.")
     #printField(cab.field)
     print("Number of block (2) tiles: ", cab.getNumTiles(2))
-    cab.drawField()
+    #cab.drawField()
 
 if __name__ == '__main__':
     main()
