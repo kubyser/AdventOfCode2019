@@ -9,11 +9,13 @@ class ASCII:
     SCAFFCOLOR = pygame.color.THECOLORS["black"]
     ROBOTCOLORS = (pygame.color.THECOLORS["green"], pygame.color.THECOLORS["blue"])
 
-    def __init__(self, fileName):
+    def __init__(self, fileName, interactive = False):
         self.program = IntComputer.readProgram(fileName)
+        if interactive:
+            self.program[0] = 2
         self.field = {}
         self.inQueue = Queue()
-        self.outQueue = Queue()
+        self.outQueue = Queue(10)
         self.computer = IntComputerThread(IntComputer(self.program, self.inQueue, self.outQueue))
         self.screen = None
         self.minX = 0
@@ -23,6 +25,14 @@ class ASCII:
         self.blockWidth = 0
         self.blockHeight = 0
         self.rescalingRequired = False
+        self.halt = False
+
+    def sendToRobot(self, instruction):
+        for x in list(instruction):
+            a = ord(x)
+            self.inQueue.put(a)
+        self.inQueue.put(10)
+
 
     def __initDraw(self):
         pygame.init()
@@ -103,6 +113,11 @@ class ASCII:
 
 
     def __drawField(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                # Close the program any way you want, or troll users who want to close your program.
+                print("QUIT received")
+                #self.halt = True
         self.screen.fill(self.BACKGROUDCOLOR)
         for i in range(self.minX, self.maxX + 1):
             for j in range(self.minY, self.maxY + 1):
@@ -120,6 +135,8 @@ class ASCII:
                     self.__drawRobot(x, y, self.blockWidth, self.blockHeight, 1)
                 elif t == "<":
                     self.__drawRobot(x, y, self.blockWidth, self.blockHeight, 3)
+                elif t == "X":
+                    self.__drawRobot(x, y, self.blockWidth, self.blockHeight, 4)
         pygame.display.update()
 
     def run(self):
@@ -129,19 +146,23 @@ class ASCII:
         self.__initDraw()
         self.computer.start()
         n = None
-        while self.computer.is_alive() or not self.outQueue.empty():
+        while not self.halt and (self.computer.is_alive() or not self.outQueue.empty()):
 #            if self.outQueue.empty():
 #                self.__drawField()
-            if n is None:
-                try:
-                    n = self.outQueue.get(True, 1)
-                except Empty:
-                    continue
+            try:
+                n = self.outQueue.get(True, 5)
+            except Empty:
+                continue
             c = chr(n)
             if n == 10:
                 #print(s)
-                yPos += 1
-                xPos = 0
+                if s == "":
+                    xPos = 0
+                    yPos = 0
+                    self.__drawField()
+                else:
+                    yPos += 1
+                    xPos = 0
                 s = ""
             else:
                 self.field[(xPos, yPos)] = c
@@ -159,11 +180,11 @@ class ASCII:
                     self.maxY = yPos
                     self.rescalingRequired = True
                 xPos += 1
-            n = None
-        #if s != "":
-            #print(s)
-        self.__drawField()
+        if n is not None:
+            print(n)
+        #self.__drawField()
         self.computer.join()
+        return n
 
     def waitToClose(self):
         running = True
