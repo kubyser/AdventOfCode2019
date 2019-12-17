@@ -15,7 +15,7 @@ class ArcadeCabinet:
     PADDLECOLOR = pygame.color.THECOLORS["orange"]
     BALLCOLOR = pygame.color.THECOLORS["red"]
     TEXTCOLOR = pygame.color.THECOLORS["black"]
-    SLEEPTIME = 0
+    SLEEPTIME = 0.01
 
     class Controller:
         def __init__(self):
@@ -149,6 +149,11 @@ class ArcadeCabinet:
         t = None
         self.initDraw()
         while computer.is_alive() or not outQueue.empty():
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                # Close the program any way you want, or troll users who want to close your program.
+                    print("QUIT received")
+                    #self.halt = True
             if inQueue.empty() and outQueue.empty():
                 time.sleep(self.SLEEPTIME)
                 inQueue.put(self.controller.getAction())
@@ -168,7 +173,7 @@ class ArcadeCabinet:
                 except Empty:
                     continue
             if x == -1 and y == 0:
-                print("Score=", t)
+                #print("Score=", t)
                 self.score = t
                 self.drawScore()
             else:
