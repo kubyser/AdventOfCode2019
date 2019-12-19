@@ -45,6 +45,63 @@ class MazeAndKeysTestCase(unittest.TestCase):
         self.assertEqual(['a', 'c', 'f', 'i', 'd', 'g', 'b', 'e', 'h'],
                          keysCollected)
 
+    def test_multimaze1(self):
+        m6 = ["#######",
+              "#a.#Cd#",
+              "##@#@##",
+              "#######",
+              "##@#@##",
+              "#cB#Ab#",
+              "#######"]
+        minDist, keysCollected = MazeAndKeys(m6).solve()
+        self.assertEqual(8, minDist)
+
+    def test_multimaze2(self):
+        m7 = ["###############",
+              "#d.ABC.#.....a#",
+              "######@#@######",
+              "###############",
+              "######@#@######",
+              "#b.....#.....c#",
+              "###############"]
+        minDist, keysCollected = MazeAndKeys(m7).solve()
+        self.assertEqual(24, minDist)
+
+    def test_multimaze3(self):
+        m8 = ["#############",
+              "#DcBa.#.GhKl#",
+              "#.###@#@#I###",
+              "#e#d#####j#k#",
+              "###C#@#@###J#",
+              "#fEbA.#.FgHi#",
+              "#############"]
+        minDist, keysCollected = MazeAndKeys(m8).solve()
+        self.assertEqual(32, minDist)
+
+    def test_multimaze4(self):
+        m9 = ["#############",
+              "#g#f.D#..h#l#",
+              "#F###e#E###.#",
+              "#dCba@#@BcIJ#",
+              "#############",
+              "#nK.L@#@G...#",
+              "#M###N#H###.#",
+              "#o#m..#i#jk.#",
+              "#############"]
+        minDist, keysCollected = MazeAndKeys(m9).solve()
+        self.assertEqual(72, minDist)
+
+    def test_multimaze5(self):
+        m7 = ["###############",
+              "#d.ABC.#.....a#",
+              "######@#@######",
+              "###############",
+              "######@#@######",
+              "#b.....#.....c#",
+              "###############"]
+        minDist, keysCollected = MazeAndKeys(m7).solve()
+        self.assertEqual(24, minDist)
+
 
 if __name__ == '__main__':
     unittest.main()

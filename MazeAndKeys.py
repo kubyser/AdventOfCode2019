@@ -1,5 +1,6 @@
 import copy
 
+
 class MazeAndKeys:
 
     __keysSet = "abcdefghijklmnopqrstuvwxyz"
@@ -8,7 +9,7 @@ class MazeAndKeys:
     def __init__(self, mazeStrings):
         self.__maze = {}
         self.__keysInMap = {}
-        self.__startPos = (None, None)
+        self.__startPos = []
         self.__maxX = 0
         self.__maxY = 0
         self.__exploredKeySets = {}
@@ -27,7 +28,7 @@ class MazeAndKeys:
                 if s == "#":
                     self.__maze[(i, j)] = "#"
                 elif s == "@":
-                    self.__startPos = (i, j)
+                    self.__startPos.append((i, j))
                 elif s in self.__keysSet:
                     self.__keysInMap[s] = (i, j)
                     self.__maze[(i, j)] = s
@@ -38,7 +39,7 @@ class MazeAndKeys:
         for j in range(self.__maxY+1):
             s = ""
             for i in range(self.__maxX+1):
-                if (i, j) == self.__startPos:
+                if (i, j) in self.__startPos:
                     s += "@"
                 elif (i, j) in self.__maze:
                     s += self.__maze[(i, j)]
@@ -52,9 +53,9 @@ class MazeAndKeys:
             for i in range(self.__maxX+1):
                 if (i, j) in visited:
                     s += "%"
-                elif (i,j) in newNodes:
+                elif (i, j) in newNodes:
                     s += "+"
-                elif (i, j) == self.__startPos:
+                elif (i, j) in self.__startPos:
                     s += "@"
                 elif (i, j) in self.__maze:
                     s += self.__maze[(i, j)]
@@ -62,6 +63,9 @@ class MazeAndKeys:
                     s += " "
             print(s)
 
+    def __printGlobalMap(self):
+        for x in self.__globalMap:
+            print(x, ":", self.__globalMap[x])
 
     def __keyChar(self, doorChar):
         return doorChar.lower()
@@ -96,7 +100,6 @@ class MazeAndKeys:
 
     def __backtrackFindingDoors(self, pos, visited):
         doors = set()
-        stop = False
         p = pos
         while p is not None:
             if p not in visited:
@@ -139,28 +142,26 @@ class MazeAndKeys:
                 stop = True
             else:
                 dist += 1
-                #self.__printMazeDebug(visited, newNodes)
-                #print("Depth ", dist)
-                #input("Enter to continue...")
                 searchNodes = newNodes
 
-    def __routeAlreadyExplored(self, k, keysCollected, distance):
-        if k not in self.__exploredKeySets:
+    def __routeAlreadyExplored(self, positions, keysCollected, distance):
+        if tuple(positions) not in self.__exploredKeySets:
             return False
-        routes = self.__exploredKeySets[k]
+        routes = self.__exploredKeySets[tuple(positions)]
         c = "".join(sorted(keysCollected))
         if c not in routes:
             return False
         prevDist = routes[c]
         return distance >= prevDist
 
-    def __addRouteToAlreadyExplored(self, k, keysCollected, distance):
-        if k not in self.__exploredKeySets:
-            self.__exploredKeySets[k] = {}
-        self.__exploredKeySets[k]["".join(sorted(keysCollected))] = distance
+    def __addRouteToAlreadyExplored(self, positions, keysCollected, distance):
+        if tuple(positions) not in self.__exploredKeySets:
+            self.__exploredKeySets[tuple(positions)] = {}
+        self.__exploredKeySets[tuple(positions)]["".join(sorted(keysCollected))] = distance
 
     def __buildGlobalMap(self):
-        self.__exploreFromThroughDoors(self.__startPos)
+        for sp in self.__startPos:
+            self.__exploreFromThroughDoors(sp)
         for k in self.__keysInMap.keys():
             self.__exploreFromThroughDoors(self.__keysInMap[k])
 
@@ -186,32 +187,39 @@ class MazeAndKeys:
     def __buildRoutesWide(self):
         minDistance = None
         bestRoute = None
-        pos = self.__startPos
+        positions = copy.deepcopy(self.__startPos)
         keysCollected = []
-        keysToExplore = [(pos, keysCollected, 0)]
+        keysToExplore = [(positions, keysCollected, 0)]
         stop = False
         depth = 0
         while not stop:
             print("At depth ", depth)
             depth += 1
             newKeysToExplore = []
-            for (pos, keysCollected, dist) in keysToExplore:
+            for (positions, keysCollected, dist) in keysToExplore:
                 newKeysCollected = copy.deepcopy(keysCollected)
-                if pos in self.__maze:
-                    if self.__maze[pos] in self.__keysSet:
-                        newKeysCollected.append(self.__maze[pos])
-                newKeys = self.__findAccessibleKeysInGlobalMap(pos, newKeysCollected)
-                if not newKeys:
+                noNewKeysFound = True
+                for pos in positions:
+                    if pos in self.__maze:
+                        if self.__maze[pos] in self.__keysSet:
+                            foundKey = self.__maze[pos]
+                            if foundKey not in newKeysCollected:
+                                newKeysCollected.append(foundKey)
+                for posP in range(len(positions)):
+                    pos = positions[posP]
+                    newKeys = self.__findAccessibleKeysInGlobalMap(pos, newKeysCollected)
+                    for k in newKeys:
+                        noNewKeysFound = False
+                        newPositions = copy.deepcopy(positions)
+                        newPositions[posP] = self.__keysInMap[k]
+                        newDist = dist + newKeys[k]
+                        if not self.__routeAlreadyExplored(newPositions, newKeysCollected, newDist):
+                            newKeysToExplore.append((newPositions, newKeysCollected, newDist))
+                            self.__addRouteToAlreadyExplored(newPositions, newKeysCollected, newDist)
+                if noNewKeysFound:
                     if True if minDistance is None else dist < minDistance:
                         minDistance = dist
                         bestRoute = newKeysCollected
-                else:
-                    for k in newKeys.keys():
-                        newKeyPos = self.__keysInMap[k]
-                        newDist = dist + newKeys[k]
-                        if not self.__routeAlreadyExplored(k, newKeysCollected, newDist):
-                            newKeysToExplore.append((newKeyPos, newKeysCollected, newDist))
-                            self.__addRouteToAlreadyExplored(k, newKeysCollected, newDist)
             if len(newKeysToExplore) == 0:
                 stop = True
             else:
@@ -220,6 +228,7 @@ class MazeAndKeys:
 
     def solve(self):
         self.__buildGlobalMap()
+        # self.__printGlobalMap()
         minDist, keysCollected = self.__buildRoutesWide()
         return minDist, keysCollected
 
