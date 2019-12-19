@@ -13,6 +13,7 @@ class MazeAndKeys:
         self.__maxY = 0
         self.__exploredKeySets = {}
         self.__minTotalDistance = None
+        self.__globalMap = {}
         self.__buildMaze(mazeStrings)
 
     def __buildMaze(self, sMaze):
@@ -65,67 +66,75 @@ class MazeAndKeys:
     def __keyChar(self, doorChar):
         return doorChar.lower()
 
-    def __isAccessible(self, pos, keysCollected, visited):
-        if pos in visited:
-            return False
+    def __isAccessibleThroughDoors(self, pos):
         if pos not in self.__maze:
             return True
         s = self.__maze[pos]
-        if s in self.__doorsSet:
-            if self.__keyChar(s) in keysCollected:
-                return True
-        if s in self.__keysSet:
+        if s in self.__doorsSet or s in self.__keysSet:
             return True
         return False
 
-
-    def __findAccessibleNeighbours(self, pos, keysCollected, visited):
+    def __findAccessibleNeighboursThroughtDoors(self, pos):
         res = []
         nPos = (pos[0]-1, pos[1])
-        if self.__isAccessible(nPos, keysCollected, visited):
+        if self.__isAccessibleThroughDoors(nPos):
             res.append(nPos)
         nPos = (pos[0]+1, pos[1])
-        if self.__isAccessible(nPos, keysCollected, visited):
+        if self.__isAccessibleThroughDoors(nPos):
             res.append(nPos)
         nPos = (pos[0], pos[1]-1)
-        if self.__isAccessible(nPos, keysCollected, visited):
+        if self.__isAccessibleThroughDoors(nPos):
             res.append(nPos)
         nPos = (pos[0], pos[1]+1)
-        if self.__isAccessible(nPos, keysCollected, visited):
+        if self.__isAccessibleThroughDoors(nPos):
             res.append(nPos)
         return res
 
-    def __exploreNode(self, pos, keysCollected, visited):
-        if pos in visited:
-            print("ERROR: pos in visited: ", pos)
-            return None, None
-        visited.add(pos)
-        newNodes = self.__findAccessibleNeighbours(pos, keysCollected, visited)
-        return newNodes, visited
+    def __exploreNodeThroughDoors(self, pos):
+        newNodes = self.__findAccessibleNeighboursThroughtDoors(pos)
+        return newNodes
 
-    def __exploreFrom(self, pos, keysCollected):
-        visited = set()
+    def __backtrackFindingDoors(self, pos, visited):
+        doors = set()
+        stop = False
+        p = pos
+        while p is not None:
+            if p not in visited:
+                print("ERROR: backtracking pos not in visited")
+                return None
+            else:
+                if p in self.__maze:
+                    x = self.__maze[p]
+                    if x in self.__doorsSet:
+                        doors.add(self.__keyChar(x))
+                p = visited[p]
+        return doors
+
+    def __exploreFromThroughDoors(self, pos):
+        visited = {}
         dist = 0
         stop = False
         searchNodes = [pos]
-        keysInSearch = {}
-        skipNodes = set()
+        visited[pos] = None
+        if pos in self.__globalMap:
+            print("ERROR: source position ", pos, " already in globalmap")
+            return None
+        self.__globalMap[pos] = {}
         while not stop:
             newNodes = []
             for x in searchNodes:
-                if x not in skipNodes and  x in self.__keysInMap.values():
+                if x in self.__keysInMap.values() and x != pos:
                     k = self.__maze[x]
-                    if k in keysInSearch:
+                    if k in self.__globalMap[pos]:
                         print("ERROR: key already in search: ", k)
-                    if k not in keysCollected:
-                        keysInSearch[k] = dist
-                        skipNodes.add(x)
-                nodes, visited = self.__exploreNode(x, keysCollected, visited)
+                    else:
+                        doors = self.__backtrackFindingDoors(x, visited)
+                        self.__globalMap[pos][k] = (dist, doors)
+                nodes = self.__exploreNodeThroughDoors(x)
                 for n in nodes:
-                    if n not in newNodes:
+                    if n not in newNodes and n not in visited:
                         newNodes.append(n)
-                        if x in skipNodes:
-                            skipNodes.add(x)
+                        visited[n] = x
             if len(newNodes) == 0:
                 stop = True
             else:
@@ -134,7 +143,6 @@ class MazeAndKeys:
                 #print("Depth ", dist)
                 #input("Enter to continue...")
                 searchNodes = newNodes
-        return keysInSearch
 
     def __routeAlreadyExplored(self, k, keysCollected, distance):
         if k not in self.__exploredKeySets:
@@ -150,6 +158,30 @@ class MazeAndKeys:
         if k not in self.__exploredKeySets:
             self.__exploredKeySets[k] = {}
         self.__exploredKeySets[k]["".join(sorted(keysCollected))] = distance
+
+    def __buildGlobalMap(self):
+        self.__exploreFromThroughDoors(self.__startPos)
+        for k in self.__keysInMap.keys():
+            self.__exploreFromThroughDoors(self.__keysInMap[k])
+
+    def __findAccessibleKeysInGlobalMap(self, pos, keysCollected):
+        res = {}
+        if pos not in self.__globalMap:
+            print("ERROR: pos ", pos, " not in GlobalMap")
+            return None
+        mapEntry = self.__globalMap[pos]
+        for k in mapEntry:
+            if k in keysCollected:
+                continue
+            allKeysAvailable = True
+            keysRequired = self.__globalMap[pos][k][1]
+            for reqK in keysRequired:
+                if reqK not in keysCollected:
+                    allKeysAvailable = False
+                    break
+            if allKeysAvailable:
+                res[k] = self.__globalMap[pos][k][0]
+        return res
 
     def __buildRoutesWide(self):
         minDistance = None
@@ -168,7 +200,7 @@ class MazeAndKeys:
                 if pos in self.__maze:
                     if self.__maze[pos] in self.__keysSet:
                         newKeysCollected.append(self.__maze[pos])
-                newKeys = self.__exploreFrom(pos, newKeysCollected)
+                newKeys = self.__findAccessibleKeysInGlobalMap(pos, newKeysCollected)
                 if not newKeys:
                     if True if minDistance is None else dist < minDistance:
                         minDistance = dist
@@ -186,45 +218,8 @@ class MazeAndKeys:
                 keysToExplore = newKeysToExplore
         return minDistance, bestRoute
 
-
-    def __buildRoutesFrom(self, pos, keysCollected = [], startDist = 0, bestDistance = None):
-        minTotalDistance = bestDistance
-        bestKeysCollected = None
-        keysInSearch = self.__exploreFrom(pos, keysCollected)
-        if not keysInSearch:
-            print("Found route with steps ", startDist, "route: ", keysCollected)
-            return startDist, keysCollected
-        keysSorted = [k for k, v in sorted(keysInSearch.items(), key=lambda item: item[1])]
-        for k in keysSorted:
-            if minTotalDistance is not None:
-                if startDist + keysInSearch[k] >= minTotalDistance:
-                    #print("Skipping a route")
-                    continue
-            if self.__routeAlreadyExplored(k, keysCollected, startDist + keysInSearch[k]):
-                #print("Route already explored, skipping")
-                continue
-            else:
-                if k not in self.__exploredKeySets:
-                    self.__exploredKeySets[k] = {}
-                self.__exploredKeySets[k]["".join(sorted(keysCollected))] = startDist + keysInSearch[k]
-            newKeysCollected = copy.deepcopy(keysCollected)
-            newKeysCollected.append(k)
-            #print("Trying route ", newKeysCollected)
-            dist, totalKeysCollected = self.__buildRoutesFrom(self.__keysInMap[k], newKeysCollected, startDist + keysInSearch[k], minTotalDistance)
-            if dist is not None:
-                if len(totalKeysCollected) != len(self.__keysInMap):
-                    print("ERROR: searching completed but not all keys found")
-                else:
-                    if True if minTotalDistance is None else dist < minTotalDistance:
-                        minTotalDistance = dist
-                        bestKeysCollected = totalKeysCollected
-        if bestKeysCollected is None:
-            return None, None
-        else:
-            return minTotalDistance, bestKeysCollected
-
     def solve(self):
-        #minDist, keysCollected = self.__buildRoutesFrom(self.__startPos)
+        self.__buildGlobalMap()
         minDist, keysCollected = self.__buildRoutesWide()
         return minDist, keysCollected
 
