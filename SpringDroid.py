@@ -25,6 +25,24 @@ class SpringDroid:
     def getState(self):
         return self.__outputString
 
+    def getStateWithLabels(self):
+        state = self.__outputString.splitlines()
+        res = ""
+        prevIsMap = False
+        posDroid = 0
+        for s in state:
+            if s == "" and prevIsMap:
+                res += " " * posDroid
+                res += " ABCDEFGHI\n"
+                prevIsMap = False
+            if len(s) > 0:
+                if s[0] in ("#", ".", "@"):
+                    prevIsMap = True
+            res += s + "\n"
+            if s.find("@") != -1:
+                posDroid = s.find("@")
+        return res
+
     def run(self):
         self.__computer.compute()
         self.__saveOutputAsString()

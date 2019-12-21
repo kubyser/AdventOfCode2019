@@ -9,9 +9,22 @@ def main():
               "OR T J",
               "AND D J",
               "WALK"]
-    droid.sendScriptToDroid(script)
+    script2 = ["NOT D J",
+               "NOT J J",
+               "NOT H T",
+               "NOT T T",
+               "OR E T",
+               "AND T J",
+               "NOT A T",
+               "NOT T T",
+               "AND B T",
+               "AND C T",
+               "NOT T T",
+               "AND T J",
+               "RUN"]
+    droid.sendScriptToDroid(script2)
     droid.run()
-    print(droid.getState())
+    print(droid.getStateWithLabels())
 
 if __name__ == "__main__":
     main()
