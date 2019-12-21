@@ -2,7 +2,7 @@ from PortalsMaze import PortalsMaze
 
 def main():
     f = open("day20_input.txt", "r")
-    maze = PortalsMaze(f.read().splitlines())
+    maze = PortalsMaze(f.read().splitlines(), True)
     f.close()
     # maze.printMaze()
     minSteps, portals = maze.findPath()

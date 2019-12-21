@@ -4,18 +4,18 @@ class PortalsMaze:
 
     __portalChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-    def __init__(self, mapLines):
+    def __init__(self, mapLines, recursive=False):
         self.__maze = {}
         self.__maxX, self.__maxY = 0, 0
         self.__portalsByPos = {}
         self.__unPairedPortalByLabel = {}
-        self.__buildMaze(mapLines)
+        self.__buildMaze(mapLines, recursive)
         if "AA" not in self.__unPairedPortalByLabel:
             raise Exception("Entry point AA not detected")
-        self.__startPos = self.__unPairedPortalByLabel["AA"]
+        self.__startPos = (self.__unPairedPortalByLabel["AA"], 0)
         if "ZZ" not in self.__unPairedPortalByLabel:
             raise Exception("Exit point ZZ not detected")
-        self.__endPos = self.__unPairedPortalByLabel["ZZ"]
+        self.__endPos = (self.__unPairedPortalByLabel["ZZ"], 0)
 
     def __isPortalChar(self, pos):
         if pos not in self.__maze:
@@ -42,7 +42,7 @@ class PortalsMaze:
 
 
 
-    def __buildMaze(self, sMaze):
+    def __buildMaze(self, sMaze, recursive):
         for j in range(len(sMaze)):
             for i in range(len(sMaze[j])):
                 if i > self.__maxX:
@@ -54,9 +54,16 @@ class PortalsMaze:
                     self.__maze[(i, j)] = s
                 elif s != " ":
                     raise Exception("Unexpected character in map", (i, j), s)
-        for y in range(self.__maxY):
-            for x in range(self.__maxX):
+        for y in range(self.__maxY+1):
+            for x in range(self.__maxX+1):
                 if self.__isPortalChar((x, y)):
+                    if recursive:
+                        if x == 0 or y == 0 or x == self.__maxX-1 or y == self.__maxY-1:
+                            levelChange = -1
+                        else:
+                            levelChange = 1
+                    else:
+                        levelChange = 0
                     pos = (x, y)
                     linkPos = None
                     c1 = self.__maze[pos]
@@ -89,8 +96,8 @@ class PortalsMaze:
                         otherPos = self.__unPairedPortalByLabel[label]
                         if linkPos in self.__portalsByPos or otherPos in self.__portalsByPos:
                             raise Exception("Unpaired portal already in portals list")
-                        self.__portalsByPos[linkPos] = (label, otherPos)
-                        self.__portalsByPos[otherPos] = (label, linkPos)
+                        self.__portalsByPos[linkPos] = (label, otherPos, levelChange)
+                        self.__portalsByPos[otherPos] = (label, linkPos, -levelChange)
                         del self.__unPairedPortalByLabel[label]
                     else:
                         self.__unPairedPortalByLabel[label] = linkPos
@@ -102,36 +109,46 @@ class PortalsMaze:
             return False
         return True
 
-    def __findNeighboursOf(self, pos):
+    def __findNeighboursOf(self, extPos):
         res = []
+        pos = extPos[0]
+        level = extPos[1]
         nPos = (pos[0]-1, pos[1])
         if self.__isAccessible(nPos):
-            res.append((nPos, None))
+            res.append(((nPos, level), None))
         nPos = (pos[0]+1, pos[1])
         if self.__isAccessible(nPos):
-            res.append((nPos, None))
+            res.append(((nPos, level), None))
         nPos = (pos[0], pos[1]-1)
         if self.__isAccessible(nPos):
-            res.append((nPos, None))
+            res.append(((nPos, level), None))
         nPos = (pos[0], pos[1]+1)
         if self.__isAccessible(nPos):
-            res.append((nPos, None))
+            res.append(((nPos, level), None))
         if pos in self.__portalsByPos:
             portal = self.__portalsByPos[pos]
             label = portal[0]
             nPos = portal[1]
-            res.append((nPos, label))
+            levelIncrease = portal[2]
+            if levelIncrease != -1 or level != 0:
+                res.append(((nPos, level + levelIncrease), label))
         return res
 
     def __seachFrom(self, startPos):
         visited = set()
+        visited.add(startPos)
         steps = 0
         searchNodes = [(startPos, [])]
         stop = False
+        debugDeepestLevel = 0
         while not stop:
+            # print("Depth = ", steps)
             newNodes = []
             for x in searchNodes:
                 pos = x[0]
+                if debugDeepestLevel <pos[1]:
+                    debugDeepestLevel = pos[1]
+                    # print("Deepest level = ", debugDeepestLevel)
                 portalsVisited = x[1]
                 if pos == self.__endPos:
                     return steps, portalsVisited
@@ -155,6 +172,3 @@ class PortalsMaze:
 
     def findPath(self):
         return self.__seachFrom(self.__startPos)
-
-
-
