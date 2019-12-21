@@ -28,10 +28,7 @@ class ASCII:
         self.halt = False
 
     def sendToRobot(self, instruction):
-        for x in list(instruction):
-            a = ord(x)
-            self.inQueue.put(a)
-        self.inQueue.put(10)
+        IntComputer.sendAsciiToQueue(instruction, self.inQueue)
 
 
     def __initDraw(self):

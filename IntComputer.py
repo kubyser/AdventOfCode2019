@@ -157,6 +157,22 @@ class IntComputer:
         f.close()
         return p
 
+    @staticmethod
+    def sendAsciiToQueue(asciiLine, queue):
+        for x in list(asciiLine):
+            a = ord(x)
+            queue.put(a)
+        queue.put(10)
+
+    @staticmethod
+    def sendAsciiListToQueue(asciiList, queue):
+        for s in asciiList:
+            for x in list(s):
+                a = ord(x)
+                queue.put(a)
+            queue.put(10)
+
+
 # IntComputerThread
 class IntComputerThread(Thread):
 
