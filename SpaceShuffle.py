@@ -1,58 +1,27 @@
 class SpaceShuffle:
 
     def __init__(self, numCards):
-        self.__numCards = numCards
-        self.__startPos = 0
-        self.__directionMultiplier = 1
-        self.__increment = 1
-
-    def __getLoopedPos(self, p):
-        if p >= self.__numCards:
-            return p - self.__numCards
-        elif p < 0:
-            return self.__numCards + p
-        else:
-            return p
-
-    def __getValueOfPos(self, pos):
-        n = 0
-        while (n * self.__numCards + pos) % self.__increment != 0:
-            n += 1
-        res = (n * self.__numCards + pos) // self.__increment
-        return res
-
-    def getDeckOld(self):
-        p = self.__startPos
-        res = []
-        for i in range(self.__numCards):
-            res.append(self.__getValueOfPos(p))
-            p = self.__getLoopedPos(p+1)
-        return res
+        self.__deck = [0] * numCards
+        for i in range(numCards):
+            self.__deck[i] = i
 
     def getDeck(self):
-        res = []
-        values = {}
-        for value in range(self.__numCards):
-
-            pos = (self.__getLoopedPos(value - self.__startPos) * self.__increment) % self.__numCards + self.__startPos
-            values[self.__getLoopedPos(pos - self.__startPos)] = value
-        # print(values)
-        for i in range(self.__numCards):
-            res.append(values[i])
-        return res
-
+        return self.__deck
 
     def dealIntoNewStack(self):
-        self.__startPos = self.__getLoopedPos(self.__startPos - self.__directionMultiplier * self.__increment)
-        self.__directionMultiplier = -self.__directionMultiplier
+        self.__deck.reverse()
         return
 
     def cutNCards(self, n):
-        # self.__startPos = self.__getLoopedPos(self.__startPos + self.__directionMultiplier * self.__increment * n)
-        self.__startPos = self.__getLoopedPos(self.__startPos + n)
+        tempDeck = self.__deck[n:]
+        tempDeck += self.__deck[0:n]
+        self.__deck = tempDeck
 
     def dealWithIncrementN(self, n):
-        self.__increment *= n
+        tempDeck = [None] * len(self.__deck)
+        for i in range(len(self.__deck)):
+            tempDeck[(i * n) % len(self.__deck)] = self.__deck[i]
+        self.__deck = tempDeck
 
     def shuffleInstruction(self, instruction):
         knownCommands = {}
