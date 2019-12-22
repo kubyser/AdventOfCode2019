@@ -1,10 +1,11 @@
 class SpaceShuffle:
 
-    def __init__(self, numCards):
+    def __init__(self, numCards, searchPos=0):
         self.__numCards = numCards
         self.__startPos = 0
         self.__directionMultiplier = 1
         self.__increment = 1
+        self.__searchPos = searchPos
 
     def __getLoopedPos(self, p):
         if p >= self.__numCards:
@@ -85,3 +86,10 @@ class SpaceShuffle:
     def getPositionOfCard(self, card):
         return self.__deck.index(card)
 
+
+    def reverseDealWithIncrement(self, searchPos, increment):
+        n = 0
+        while (n * self.__numCards + searchPos) % increment != 0:
+            n += 1
+        prevPos = (n * self.__numCards + searchPos) // increment
+        return
