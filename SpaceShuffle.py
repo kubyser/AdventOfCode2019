@@ -1,58 +1,80 @@
 class SpaceShuffle:
 
+    class Card:
+        def __init__(self, value, prev, next):
+            self.value = value
+            self.prev = prev
+            self.next = next
+
+
     def __init__(self, numCards):
         self.__numCards = numCards
+        self.__deck = {}
+        self.__directionRight = True
+        for i in range(numCards):
+            card = self.Card(i, None, None)
+            if i > 0:
+                card.prev = self.__deck[i-1]
+                self.__deck[i-1].next = card
+            self.__deck[i] = card
+        self.__deck[0].prev = self.__deck[numCards-1]
+        self.__deck[numCards-1].next = self.__deck[0]
+        self.__startCard = self.__deck[0]
         self.__startPos = 0
-        self.__directionMultiplier = 1
-        self.__increment = 1
+
 
     def __getLoopedPos(self, p):
-        if p >= self.__numCards:
-            return p - self.__numCards
-        elif p < 0:
-            return self.__numCards + p
-        else:
-            return p
+            if p >= self.__numCards:
+                return p - self.__numCards
+            elif p < 0:
+                return self.__numCards + p
+            else:
+                return p
 
-    def __getValueOfPos(self, pos):
-        n = 0
-        while (n * self.__numCards + pos) % self.__increment != 0:
-            n += 1
-        res = (n * self.__numCards + pos) // self.__increment
-        return res
-
-    def getDeckOld(self):
-        p = self.__startPos
-        res = []
-        for i in range(self.__numCards):
-            res.append(self.__getValueOfPos(p))
-            p = self.__getLoopedPos(p+1)
+    def __move(self, p, n):
+        res = p
+        absN = abs(n)
+        direction = self.__directionRight if n>=0 else not self.__directionRight
+        for i in range(absN):
+            res = res.next if direction else res.prev
         return res
 
     def getDeck(self):
+        p = self.__startCard
         res = []
-        values = {}
-        for value in range(self.__numCards):
-
-            pos = (self.__getLoopedPos(value - self.__startPos) * self.__increment) % self.__numCards + self.__startPos
-            values[self.__getLoopedPos(pos - self.__startPos)] = value
-        # print(values)
         for i in range(self.__numCards):
-            res.append(values[i])
+            res.append(p.value)
+            p = self.__move(p, 1)
         return res
 
-
     def dealIntoNewStack(self):
-        self.__startPos = self.__getLoopedPos(self.__startPos - self.__directionMultiplier * self.__increment)
-        self.__directionMultiplier = -self.__directionMultiplier
-        return
+        self.__startCard = self.__startCard.prev if self.__directionRight else self.__startCard.next
+        self.__startPos + 1 if not self.__directionRight else -1
+        self.__directionRight = not self.__directionRight
 
     def cutNCards(self, n):
         # self.__startPos = self.__getLoopedPos(self.__startPos + self.__directionMultiplier * self.__increment * n)
-        self.__startPos = self.__getLoopedPos(self.__startPos + n)
+        self.__startCard = self.__move( self.__startCard, n)
+        self.__startPos = self.__getLoopedPos(self.__startPos + (n * 1 if self.__directionRight else -1))
 
     def dealWithIncrementN(self, n):
-        self.__increment *= n
+        p = self.__startCard
+        newDeck = {}
+        for i in range(self.__numCards):
+            newPos = self.__getLoopedPos(self.__startPos + ((i * n) % self.__numCards) *
+                                         (1 if self.__directionRight else -1))
+            newCard = self.Card(p.value, None, None)
+            newDeck[newPos] = newCard
+            if self.__getLoopedPos(newPos-1) in newDeck:
+                newDeck[self.__getLoopedPos(newPos-1)].next = newCard
+                newCard.prev = newDeck[self.__getLoopedPos(newPos-1)]
+            if self.__getLoopedPos(newPos+1) in newDeck:
+                newDeck[self.__getLoopedPos(newPos+1)].prev = newCard
+                newCard.next = newDeck[self.__getLoopedPos(newPos+1)]
+            p = self.__move(p, 1)
+        self.__deck = newDeck
+        self.__startCard = newDeck[self.__startPos]
+
 
     def shuffleInstruction(self, instruction):
         knownCommands = {}
@@ -83,5 +105,10 @@ class SpaceShuffle:
             self.shuffleInstruction(s)
 
     def getPositionOfCard(self, card):
-        return self.__deck.index(card)
+        p = self.__startCard
+        for i in range(self.__numCards):
+            if p.value == card:
+                return i
+            p = self.__move(p, 1)
+        return None
 
