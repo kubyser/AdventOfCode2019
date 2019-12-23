@@ -1,5 +1,5 @@
-from queue import Queue
-from threading import Thread
+from queue import Queue, Empty
+from threading import Thread, Lock
 
 
 class IntComputer:
@@ -14,11 +14,15 @@ class IntComputer:
             self.value = None
             self.address = None
 
-    def __init__(self, program, inQueue=None, outQueue=None):
+    def __init__(self, program, inQueue=None, outQueue=None, inQueueBlocking=True, inQueueTimeout=None, inQueueDefaultValue=-1):
+        self.lock = Lock()
         self.mem = {}
         for i in range(0, len(program)):
             self.mem[i] = program[i]
         self.inQueue = inQueue
+        self.__inQueueBlocking = inQueueBlocking
+        self.__inQueueTimeout = inQueueTimeout
+        self.__inQueueDefaultValue = inQueueDefaultValue
         self.outQueue = outQueue
         self.base = 0
         self.pPos = 0
@@ -59,7 +63,13 @@ class IntComputer:
         if self.inQueue is None:
             a = int(input("Input value:"))
         else:
-            a = self.inQueue.get()
+            try:
+                self.lock.acquire()
+                a = self.inQueue.get(self.__inQueueBlocking, self.__inQueueTimeout)
+            except Empty:
+                a = self.__inQueueDefaultValue
+            finally:
+                self.lock.release()
             if a == "TERM":
                 a = 0
                 self.errorHalt = True
@@ -178,6 +188,7 @@ class IntComputerThread(Thread):
 
     def __init__(self, computer):
         Thread.__init__(self)
+        self.lock = computer.lock
         self.computer = computer
 
     def run(self):
