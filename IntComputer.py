@@ -1,5 +1,6 @@
 from queue import Queue, Empty
 from threading import Thread, Lock
+import time
 
 
 class IntComputer:
@@ -23,10 +24,14 @@ class IntComputer:
         self.__inQueueBlocking = inQueueBlocking
         self.__inQueueTimeout = inQueueTimeout
         self.__inQueueDefaultValue = inQueueDefaultValue
+        self.__asciiMode = False
         self.outQueue = outQueue
         self.base = 0
         self.pPos = 0
         self.errorHalt = False
+
+    def setAsciiInputMode(self, asciiMode):
+        self.__asciiMode = asciiMode
 
     def readMem(self, pos):
         if pos < 0:
@@ -227,3 +232,25 @@ class Chain:
         else:
             return self.computers[-1].computer.outQueue.get()
 
+class IntComputerAsciiTerminal:
+
+    def __init__(self, program):
+        self.__inQueue = Queue()
+        self.__outQueue = Queue()
+        self.__computer = IntComputerThread(IntComputer(program, self.__inQueue, self.__outQueue))
+
+    def run(self):
+        self.__computer.start()
+        s = ""
+        while True:
+            if not self.__outQueue.empty():
+                a = self.__outQueue.get()
+                if a == 10:
+                    print(s)
+                    s = ""
+                else:
+                    s += chr(a)
+            else:
+                c = input(">")
+                IntComputer.sendAsciiToQueue(c, self.__inQueue)
+                time.sleep(0.5)
