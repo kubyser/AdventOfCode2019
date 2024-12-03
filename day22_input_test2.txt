@@ -1,2 +1,0 @@
-deal into new stack
-deal with increment 3
